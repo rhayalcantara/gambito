@@ -27,3 +27,11 @@ Destino: repo público `rhayalcantara/gambito` → https://rhayalcantara.github.
 | 6 | Prueba local (servidor + Chrome) | finalizado |
 | 7 | Repo público + GitHub Pages | finalizado |
 | 8 | Verificación en la URL pública + QR | finalizado |
+
+## Ajuste 1 (2026-11-15) — tablero que se va hacia arriba al ver una partida en el celular
+Causa: `scrollIntoView` de la jugada actual desplaza toda la página.
+| # | Tarea | Estado |
+|---|---|---|
+| 1 | Desplazar solo dentro de la caja de jugadas (nunca la página) | finalizado |
+| 2 | Celular/Tablero: jugadas en una línea horizontal bajo el tablero, actual centrada, las demás se desvanecen | finalizado |
+| 3 | Aplicar en Downloads y en el repo, subir versión del SW, probar y publicar | finalizado |
