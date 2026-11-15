@@ -24,6 +24,6 @@ Destino: repo público `rhayalcantara/gambito` → https://rhayalcantara.github.
 | 3 | Manifest + metas iPhone | finalizado |
 | 4 | sql.js local | finalizado |
 | 5 | Service worker offline | finalizado |
-| 6 | Prueba local (servidor + Chrome) | en progreso |
-| 7 | Repo público + GitHub Pages | pendiente |
-| 8 | Verificación en la URL pública + QR | pendiente |
+| 6 | Prueba local (servidor + Chrome) | finalizado |
+| 7 | Repo público + GitHub Pages | finalizado |
+| 8 | Verificación en la URL pública + QR | finalizado |
