@@ -1,5 +1,5 @@
 // GAMBITO · service worker: app disponible sin conexión tras la primera visita
-const VERSION = "gambito-v6";
+const VERSION = "gambito-v7";
 const APP = ["./", "index.html", "manifest.webmanifest", "vendor/sql-wasm.js", "vendor/sql-wasm.wasm",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png",
   "vendor/stockfish/stockfish-18-lite-single.js"];

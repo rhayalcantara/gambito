@@ -107,3 +107,24 @@ Verificado (321 partidas de prueba): jugador 101 = SQL 101; jugador+rival 23 = 2
 | 1 | Implementación (asistente, GameRunner con relojes, bandera, armagedón, Play modo torneo, estimación) | finalizado |
 | 2 | Pruebas (Node + navegador, persistencia de relojes al recargar) | finalizado |
 | 3 | Revisión y publicación | finalizado |
+
+## Ajuste 6 (aprobado, 2026-11-15) — Sección de Aperturas en la biblioteca
+- Panel **Aperturas** en la columna izquierda, debajo de Torneos (en el celular, plegable igual que Torneos).
+- Dos niveles por código ECO:
+  - A · Aperturas de flanco (Inglesa, Réti, Bird…)
+  - B · Semiabiertas (Siciliana, Caro-Kann, Pirc, Escandinava…)
+  - C · Abiertas y Francesa (Española, Italiana, Petrov, Gambito de rey, Francesa…)
+  - D · Cerradas (Gambito de dama, Eslava, Grünfeld…)
+  - E · Indias (Nimzo-india, India de rey, Catalana…)
+  Cada grupo se despliega con sus aperturas y el número de partidas; buscador de aperturas.
+- Elegir un grupo filtra por letra ECO; elegir una apertura filtra por su nombre. Se combina con los demás filtros (jugador, rival, fechas, resultado, torneo) y cuenta en «Filtros (n)»; se guarda en las vistas.
+- Partidas sin ECO/apertura (antiguas o importadas sin cabeceras): se completan una sola vez con el libro de aperturas (246 líneas), sin pisar datos existentes; las que no se reconozcan quedan en «Sin clasificar».
+| # | Tarea | Estado |
+|---|---|---|
+| 1 | Consulta: filtro eco/apertura + conteos por grupo (SQLite y modo local) | finalizado |
+| 2 | Completar ECO/apertura faltantes con el libro (una vez) | finalizado |
+| 3 | Panel Aperturas (grupos, buscador, activo, plegable en celular, accesible) | finalizado |
+| 4 | Integración con filtros, paginación y vistas | finalizado |
+| 5 | Pruebas (conteos = SQL, celular/escritorio, consola) y publicación | finalizado |
+
+Verificado (330 partidas): grupos A/B/C/D/E/sin clasificar 63/85/93/87/1/1 = SQL; Najdorf 1 = 1; jugador «rhay» + grupo C 29 = 29; completado de ECO en partidas viejas (Najdorf, India de rey; la no reconocible queda «Sin clasificar»); escritorio: Torneos y Aperturas a media columna cada uno; celular plegable, sin desbordes; consola limpia.
