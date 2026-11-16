@@ -448,6 +448,8 @@ body[data-view="tourney"]{--tintA:rgba(226,166,61,.17);--tintB:rgba(121,194,87,.
 #trn-add-level-v{letter-spacing:0;text-transform:none;color:var(--gold2)}
 .trn-plist{list-style:none;display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto;margin-top:6px}
 .trn-prow{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:4px 6px 4px 10px;font-size:13px}.trn-prow .seed{font:600 11px var(--mono);color:var(--gold2);width:20px}.trn-prow .pn2{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.trn-prow small{font:10px var(--mono);color:var(--cyan);padding-right:8px}.trn-prow .ibtn{width:32px;height:32px}
+.trn-hint{margin-top:5px;font-size:12px}.trn-tc-custom{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 9px;align-items:end}.trn-tc-custom[hidden]{display:none}.trn-tc-err{grid-column:1/-1;color:#ff8f92;font-size:12.5px;margin:-4px 0 8px}.trn-tc-err:empty{display:none}
+.trn-warn{font-size:12.5px;color:var(--gold2);background:rgba(226,166,61,.08);border:1px solid var(--goldD);border-radius:10px;padding:9px 11px;margin-top:8px;line-height:1.5}.trn-warn:empty{display:none}
 .trn-est{font-size:12.5px;color:var(--dim);background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-top:8px;line-height:1.5}
 #trn-form .fen-row .btn{flex:1}
 @media(max-width:1180px){.trn-grid{grid-template-columns:minmax(0,1fr) 370px}}
@@ -647,12 +649,14 @@ body[data-view="tourney"]{--tintA:rgba(226,166,61,.17);--tintB:rgba(121,194,87,.
    <ol class="trn-plist" id="trn-plist" aria-label="Participantes por semilla"></ol>
   </div>
   <div class="trn-step" data-step="3" hidden>
-   <div class="trn-field" id="trn-tc-row" hidden><label for="trn-tc">Tu reloj</label><select id="trn-tc"><option value="none">Sin reloj</option><option value="180+2">3 min + 2 s</option><option value="300+0">5 min</option><option value="600+0">10 min</option></select></div>
+   <div class="trn-field" id="trn-tc-row"><label for="trn-tc">Ritmo de juego</label><select id="trn-tc" aria-describedby="trn-tc-hint trn-est-warn"><option value="none">Sin reloj (tiempo fijo por jugada del nivel)</option><option value="60+0">Bala · 1+0</option><option value="180+2">Relámpago · 3+2</option><option value="300+0">Relámpago · 5+0</option><option value="600+0">Rápido · 10+0</option><option value="900+10">Rápido · 15+10</option><option value="custom">Personalizado…</option></select><p class="hint trn-hint" id="trn-tc-hint">Se aplica a todas las partidas: motor contra motor y las tuyas.</p></div>
+   <div class="trn-tc-custom" id="trn-tc-custom" hidden><div class="trn-field"><label for="trn-tc-min">Minutos por jugador (0,5–180)</label><input type="number" id="trn-tc-min" min="0.5" max="180" step="0.5" value="5" inputmode="decimal" aria-describedby="trn-tc-cerr" disabled></div><div class="trn-field"><label for="trn-tc-inc">Incremento en segundos (0–60)</label><input type="number" id="trn-tc-inc" min="0" max="60" step="1" value="3" inputmode="numeric" aria-describedby="trn-tc-cerr" disabled></div><p class="trn-tc-err" id="trn-tc-cerr" aria-live="polite"></p></div>
    <div class="trn-field"><label for="trn-think">Reflexión de los motores</label><select id="trn-think"><option value="normal">Normal (tiempo del nivel)</option><option value="rapido">Rápido (35 % del tiempo)</option></select></div>
    <div class="trn-field"><label for="trn-open">Aperturas</label><select id="trn-open"><option value="libro">Libro de Aurora (niveles 3+)</option><option value="variadas">Variadas (la vuelta repite la apertura)</option></select></div>
    <div class="trn-field"><label for="trn-seed">Sembrado</label><select id="trn-seed"><option value="orden">Orden de la lista</option><option value="azar">Al azar</option></select></div>
    <div class="switch-row"><span id="trn-adj-l">Adjudicar partidas decididas o muertas</span><label class="switch"><input type="checkbox" id="trn-adj" checked aria-labelledby="trn-adj-l"><i></i></label></div>
    <p class="trn-est" id="trn-est"></p>
+   <p class="trn-warn" id="trn-est-warn"></p>
   </div>
   <div class="fen-err" id="trn-err" role="alert"></div>
   <div class="fen-row"><button type="button" class="btn" id="trn-prev" hidden>Atrás</button><button type="submit" class="btn btn-primary" id="trn-next"><span>Siguiente</span></button></div>
@@ -1416,7 +1420,7 @@ function tourneyCoreFactory(){
   rnd=rnd||Math.random;const s=Object.assign({tc:"none",think:"normal",swissRounds:0,koGames:2,koArmageddon:true,adjudicate:true,maxMoves:200,openings:"libro",seeding:"orden"},cfg.settings||{});
   let ps=cfg.players.map(p=>Object.assign({},p));if(s.seeding==="azar")ps=shuffle(ps,rnd);
   ps.forEach((p,i)=>{p.pid=i;p.seed=i+1;p.withdrawn=false});uniqueNames(ps);
-  const n=ps.length,t={v:1,name:cfg.name,format:cfg.format,settings:s,players:ps,rounds:[],games:{},ko:null,current:0,gseq:0,status:"running",createdAt:Date.now(),finishedAt:null};
+  s.tc=normTc(s.tc);const n=ps.length,t={v:2,name:cfg.name,format:cfg.format,settings:s,players:ps,rounds:[],games:{},ko:null,current:0,gseq:0,status:"running",createdAt:Date.now(),finishedAt:null};
   if(cfg.format==="rr1"||cfg.format==="rr2"){
    roundRobin(n,cfg.format==="rr2").forEach((R,r)=>{const gs=R.pairs.map(([w,b],k)=>newGame(t,r+1,k+1,w,b,R.mirror?{mirror:true}:null));t.rounds.push({n:r+1,name:`Ronda ${r+1}`,status:"pending",games:gs,rest:R.rest})});
   }else if(cfg.format==="swiss"){
@@ -1526,7 +1530,32 @@ function tourneyCoreFactory(){
   out.cols=t.format==="ko"?["reached","pts"]:t.format==="swiss"?["pts","buchC1","buch","sb","w","h2h"]:["pts","h2h","sb","w","wb"];
   return out}
 
- return{FORMATS,makeRng,shuffle,scoreOf,roundRobin,seedOrder,koSize,koRoundName,koNext,swissRoundsDefault,swissInfo,swissPair,colorPair,gameEndReason,adjudicate,create,record,settle,withdraw,progress,standings}
+ /* ---- Ajuste 5: ritmo de juego. tc = "base+inc" en segundos ("180+2") o "none" ---- */
+ const TC_PRESETS=[["none","Sin reloj"],["60+0","Bala 1+0"],["180+2","Relámpago 3+2"],["300+0","Relámpago 5+0"],["600+0","Rápido 10+0"],["900+10","Rápido 15+10"]];
+ function normTc(tc){
+  if(tc==null)return"none";const str=String(tc).trim();if(!str||str==="none")return"none";
+  const m=str.match(/^(\d+(?:[.,]\d+)?)\s*(?:\+\s*(\d+(?:[.,]\d+)?))?$/);if(!m)return"none";
+  let base=+m[1].replace(",","."),inc=Math.round(+(m[2]||"0").replace(",","."));
+  if(base<30)base*=60;/* formato antiguo en minutos ("3+2", "5+0", "10+0") */
+  base=Math.round(base);if(!(base>=30&&base<=10800)||!(inc>=0&&inc<=60))return"none";
+  return base+"+"+inc}
+ function parseTc(tc){const n=normTc(tc);if(n==="none")return null;const[base,inc]=n.split("+").map(Number);return{base,inc}}
+ function tcLabel(tc){const n=normTc(tc),pre=TC_PRESETS.find(x=>x[0]===n);if(pre)return pre[1];const p=parseTc(n),b=p.base;
+  const mins=b%60===0?String(b/60):b%30===0?String(b/60).replace(".",","):`${Math.floor(b/60)}:${String(b%60).padStart(2,"0")}`;return`${mins}+${p.inc}`}
+ // reloj inicial (segundos); armagedón: negras 4/5 del tiempo
+ function startClock(tc,arm){const p=parseTc(tc);if(!p)return null;return{w:p.base,b:arm?Math.round(p.base*8)/10:p.base}}
+ // misma regla que Jugar: max(60 ms, min(tiempo del nivel, restante/30 + inc·0,8))
+ function clockMovetime(baseMt,rest,inc){return Math.max(60,Math.min(baseMt,(Math.max(0,rest)/30+(inc||0)*.8)*1000))|0}
+ // ¿tiene material para dar mate? (misma lógica que Play.hasMating)
+ function hasMating(c,color){let minors=0;for(let q=0;q<120;q++){if(q&0x88){q+=7;continue}const p=c.board[q];if(!p||(p>0)!==(color==="w"))continue;const t=Math.abs(p);if(t===1||t===4||t===5)return true;if(t===2||t===3)minors++}return minors>=2}
+ // a `side` se le agotó el tiempo
+ function flagResult(c,side){const opp=side==="w"?"b":"w";return hasMating(c,opp)?{result:side==="w"?"0-1":"1-0",code:"time",text:"Tiempo agotado"}:{result:"1/2-1/2",code:"time",text:"Tiempo agotado (el rival no tiene material para dar mate)"}}
+ // estimación en segundos: sin reloj ≈ 85 medias jugadas × (tiempo del nivel + 120 ms);
+ // con reloj, el tope por partida es 2×base + 40×inc, acotado por el tiempo de reflexión del nivel
+ function estimateSecs(o){const p=parseTc(o.tc),fixed=85*(o.avgMt||300)/1000,over=85*.12;
+  const eg=(p?Math.min(fixed,2*p.base+40*p.inc):fixed)+over,ug=p?2*p.base+40*p.inc:0;
+  return{perEngineGame:eg,perUserGame:ug,total:(o.engineGames||0)*eg+(o.userGames||0)*ug}}
+ return{FORMATS,makeRng,shuffle,scoreOf,roundRobin,seedOrder,koSize,koRoundName,koNext,swissRoundsDefault,swissInfo,swissPair,colorPair,gameEndReason,adjudicate,create,record,settle,withdraw,progress,standings,TC_PRESETS,normTc,parseTc,tcLabel,startClock,clockMovetime,hasMating,flagResult,estimateSecs}
 }
 /* ===== fin núcleo de torneos ===== */
 /* ===== Torneos · motor compartido, GameRunner, Tourney y pantalla ===== */
@@ -1546,14 +1575,22 @@ function engineRequest(engineId,level,chess,o={}){
  let bk=o.book!==false&&e.kind==="aurora"&&level>=3&&!o.startFen&&ply<20?Openings.pick(chess):null;if(bk&&!chess.parseSAN(bk))bk=null;
  return bk?Promise.resolve({book:bk}):s.go(chess.fen(),opts)}
 const trnSleep=ms=>new Promise(r=>setTimeout(r,ms));
-const TRN_TC={none:"Sin reloj","180+2":"3 min + 2 s","300+0":"5 min","600+0":"10 min"};
+/* Ajuste 5: torneos antiguos → tc normalizado; el ritmo de los torneos v1 era solo para la partida del usuario */
+function trnNormalize(t){if(!t||!t.settings)return t;t.settings.tc=TrnCore.normTc(t.settings.tc);if(!t.v||t.v<2){if(t.settings.tc!=="none")t.settings.tcUserOnly=true;t.v=2}return t}
+function trnEngineTc(t){return t.settings.tcUserOnly?"none":t.settings.tc}
+function trnClockTxt(c){return c?`blancas ${Play.fmtClock(c.w)}, negras ${Play.fmtClock(c.b)}`:""}
 function trnThinkMt(level,think){const L=LEVELS[level];return think==="rapido"?Math.max(80,Math.round(L.mt*.35)):L.mt}
 function trnRoundLabel(t,g){const R=t.rounds[g.round-1];return t.format==="ko"?`${R?R.name:"Ronda "+g.round} · ${g.ko?g.ko.stage:"1"}`:String(g.round)}
 function trnPName(t,pid){const p=t.players[pid];return p?p.name:"—"}
 
 /* ---------- GameRunner: juega una partida motor contra motor ---------- */
 const GameRunner={
- token:0,chess:null,g:null,t:null,sans:[],objs:[],evals:[],uci:[],lastEval:null,speed:"normal",lastSave:0,thinking:null,
+ token:0,chess:null,g:null,t:null,sans:[],objs:[],evals:[],uci:[],lastEval:null,speed:"normal",lastSave:0,thinking:null,clock:null,tc:null,searchT0:0,
+ // reloj visible: lo guardado menos lo que lleva la búsqueda en curso (solo cuenta el tiempo real del motor)
+ liveClock(col){if(!this.clock)return null;if(this.pend&&this.pend.side===col)return this.pend.left;return this.clock[col]-(this.thinking===col?(performance.now()-this.searchT0)/1000:0)},
+ // espera la jugada o la bandera (sondeo cada 50 ms: respeta cambios del reloj durante la búsqueda)
+ raceFlag(req,side){let iv;const lim=new Promise(res=>{iv=setInterval(()=>{if(this.liveClock(side)<=0)res({flag:true})},50)});return Promise.race([req,lim]).finally(()=>clearInterval(iv))},
+ snapshot(){const g=this.g;if(!g||g.result||!this.chess)return;g.live={sans:this.sans.slice(),evals:this.evals.slice(),clock:this.clock?{w:this.clock.w,b:this.clock.b}:null,ts:Date.now()};g.plies=this.sans.length},
  stop(){this.token++;this.thinking=null;Engines.list.forEach(e=>{Engines.cancelAll(e.id,"trn-w");Engines.cancelAll(e.id,"trn-b")})},
  // motivos para no avanzar: pausa del usuario, app en segundo plano, se juega en Jugar o se analiza
  blockedWhy(){
@@ -1571,38 +1608,44 @@ const GameRunner={
   if(live&&Array.isArray(live.evals))this.evals=live.evals.slice(0,this.sans.length);
   while(this.evals.length<this.sans.length)this.evals.push(null);
   if(!live)for(const pid of[g.w,g.b]){const p=t.players[pid],s=Engines.session(p.engine,pid===g.w?"trn-w":"trn-b");s&&s.newGame&&s.newGame()}
+  const arm=!!(g.ko&&g.ko.stage==="A"),tcP=TrnCore.parseTc(trnEngineTc(t));this.tc=tcP;this.thinking=null;this.pend=null;
+  this.clock=tcP?(live&&live.clock&&Number.isFinite(live.clock.w)&&Number.isFinite(live.clock.b)?{w:live.clock.w,b:live.clock.b}:TrnCore.startClock(trnEngineTc(t),arm)):null;
   TrnUI.liveStart(this);
-  const maxPlies=(t.settings.maxMoves||200)*2,arm=!!(g.ko&&g.ko.stage==="A"),
+  const maxPlies=(t.settings.maxMoves||200)*2,
    canAdj=t.settings.adjudicate&&!arm&&![g.w,g.b].some(pid=>{const p=t.players[pid];return p.engine==="aurora"&&p.level<=4}),
    op=t.settings.openings==="variadas"&&Array.isArray(g.opening)?g.opening:null;
   this.lastSave=Date.now();
   for(;;){
    if(tok!==this.token)return null;
    const end=gameEndReason(c,this.sans.length,maxPlies)||(canAdj?TrnCore.adjudicate(this.evals,this.sans.length):null);
-   if(end){TrnUI.liveMove(this,null,true);return{result:end.result,text:end.text,code:end.code,sans:this.sans.slice()}}
+   if(end){TrnUI.liveMove(this,null,true);return{result:end.result,text:end.text,code:end.code,sans:this.sans.slice(),clock:this.clock?{w:this.clock.w,b:this.clock.b}:null}}
    await this.gate(tok);if(tok!==this.token)return null;
    const side=c.turn(),pid=side==="w"?g.w:g.b,p=t.players[pid],t0=Date.now();
    let m=null,ev=null;
    if(op&&this.sans.length<op.length&&this.sans.every((s,i)=>s===op[i]))m=c.move(op[this.sans.length]);
    if(!m){
-    this.thinking=side;TrnUI.thinking(this,p);
-    let r=null;
+    const baseMt=trnThinkMt(p.level,t.settings.think),purpose=side==="w"?"trn-w":"trn-b",
+     mt=this.clock?TrnCore.clockMovetime(baseMt,this.clock[side],tcP.inc):baseMt;/* con reloj: misma regla que Jugar */
+    this.searchT0=performance.now();this.thinking=side;TrnUI.thinking(this,p);
+    let r=null,flag=false;
     for(let k=0;k<3&&!r;k++){
      if(tok!==this.token)return null;
-     try{r=await engineRequest(p.engine,p.level,c,{ply:this.sans.length,movetime:trnThinkMt(p.level,t.settings.think),mtScale:arm&&side==="w"?1.5:1,purpose:side==="w"?"trn-w":"trn-b",moves:this.uci,alive:()=>tok===this.token,book:t.settings.openings!=="variadas"})}
-     catch(err){if(tok!==this.token)return null;r=null;await trnSleep(200)}
+     try{const req=engineRequest(p.engine,p.level,c,{ply:this.sans.length,movetime:mt,mtScale:!this.clock&&arm&&side==="w"?1.5:1/* sin reloj: armagedón blancas ×1,5 */,purpose,moves:this.uci,alive:()=>tok===this.token,book:t.settings.openings!=="variadas"});
+      r=this.clock?await this.raceFlag(req,side):await req;if(r&&r.flag){flag=true;r=null;break}}
+     catch(err){if(tok!==this.token)return null;r=null;if(this.clock&&this.liveClock(side)<=0){flag=true;break}await trnSleep(200)}
     }
+    if(tok!==this.token){this.thinking=null;return null}
+    if(this.clock){const left=this.liveClock(side);/* se descuenta al aplicar la jugada (snapshot coherente con las jugadas) */this.pend={side,left:Math.max(0,left)};if(flag||left<=0){/* bandera */this.thinking=null;this.pend=null;this.clock[side]=0;Engines.cancelAll(p.engine,purpose);const f=TrnCore.flagResult(c,side);TrnUI.liveMove(this,null,true);return{result:f.result,text:f.text,code:f.code,sans:this.sans.slice(),clock:{w:this.clock.w,b:this.clock.b}}}}
     this.thinking=null;
-    if(tok!==this.token)return null;
     if(r&&r.book)m=c.move(r.book);else if(r&&r.from){m=c.move({from:r.from,to:r.to,promotion:r.promo||undefined});ev=Number.isFinite(r.cp)?r.cp:null;if(ev!=null)this.lastEval={cp:ev,mate:r.mate||0}}
     if(!m){const list=c.legalMoves();if(!list.length)continue;const pk=list[(Math.random()*list.length)|0];m=c.move({from:LIB.sqName(pk.from),to:LIB.sqName(pk.to),promotion:pk.promo?LIB.typeLetter(pk.promo).toLowerCase():undefined});ev=null}
    }
    const wait=this.speed==="normal"?650:this.speed==="rapido"?120:0,el=Date.now()-t0;
    if(wait>el)await trnSleep(wait-el);
    if(tok!==this.token){return null}
-   this.push(m);this.evals.push(ev);
+   this.push(m);this.evals.push(ev);if(this.clock){if(this.pend&&this.pend.side===side)this.clock[side]=this.pend.left;this.clock[side]+=tcP.inc}/* incremento tras cada jugada */this.pend=null;
    TrnUI.liveMove(this,m,false);
-   if(this.sans.length%10===0||Date.now()-this.lastSave>5000){this.lastSave=Date.now();g.live={sans:this.sans.slice(),evals:this.evals.slice(),ts:Date.now()};g.plies=this.sans.length;Tourney.save()}
+   if(this.sans.length%10===0||Date.now()-this.lastSave>5000){this.lastSave=Date.now();this.snapshot();Tourney.save()}
    if(this.speed==="saltar"&&this.sans.length%40===0)await trnSleep(0);
   }
  },
@@ -1613,10 +1656,10 @@ const GameRunner={
 const Tourney={
  t:null,id:null,busy:false,gen:0,_saveT:null,
  activeId(){const v=+DB.meta("trnActive");return v||null},
- boot(){const id=this.activeId();if(!id)return;const t=DB.trnGet(id);if(!t||t.status!=="running"){DB.setMeta("trnActive","");return}this.t=t;this.id=id;this.pump()},
- activate(id){if(this.id===id&&this.t)return this.pump();GameRunner.stop();this.gen++;this.busy=false;this.releaseLive();const t=DB.trnGet(id);if(!t||t.status!=="running")return;this.t=t;this.id=id;DB.setMeta("trnActive",id);this.pump()},
+ boot(){const id=this.activeId();if(!id)return;const t=trnNormalize(DB.trnGet(id));this.applyBackup(id,t);if(!t||t.status!=="running"){DB.setMeta("trnActive","");return}this.t=t;this.id=id;this.pump()},
+ activate(id){if(this.id===id&&this.t)return this.pump();GameRunner.stop();this.gen++;this.busy=false;this.releaseLive();const t=trnNormalize(DB.trnGet(id));this.applyBackup(id,t);if(!t||t.status!=="running")return;this.t=t;this.id=id;DB.setMeta("trnActive",id);this.pump()},
  // si se interrumpe una partida en curso, queda pendiente con su progreso guardado
- releaseLive(){if(!this.t)return;for(const g of Object.values(this.t.games))if(g.status==="live")g.status="pending";this.save(true)},
+ releaseLive(){if(!this.t)return;if(GameRunner.t===this.t)GameRunner.snapshot();for(const g of Object.values(this.t.games))if(g.status==="live")g.status="pending";this.save(true)},
  save(now){if(!this.t||!this.id)return;this.t.updatedAt=Date.now();if(now){clearTimeout(this._saveT);this._saveT=null;DB.trnSave(this.id,this.t);return}if(this._saveT)return;this._saveT=setTimeout(()=>{this._saveT=null;if(this.t)DB.trnSave(this.id,this.t)},400)},
  openingFor(t,g){
   if(t.settings.openings!=="variadas"||g.b==null||g.opening)return;
@@ -1644,7 +1687,7 @@ const Tourney={
     g.status="live";this.save();TrnUI.render();
     const res=await GameRunner.play(t,g);
     if(this.t!==t||gen!==this.gen)break;
-    if(!res){if(g.status==="live")g.status="pending";this.save(true);break}
+    if(!res){if(GameRunner.g===g)GameRunner.snapshot();if(g.status==="live")g.status="pending";this.save(true);break}
     this.finishGame(g,res);
     await trnSleep(GameRunner.speed==="saltar"?60:900);
    }
@@ -1652,14 +1695,14 @@ const Tourney={
   TrnUI.render(!this.busy)},
  libRecord(t,g,res,sans){
   const d=new Date(),pad=n=>String(n).padStart(2,"0"),op=Openings.detect(sans);
-  return{event:t.name,site:"Gambito Lab · Torneo",date:`${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())}`,round:trnRoundLabel(t,g),white:trnPName(t,g.w),black:trnPName(t,g.b),result:res.result,white_elo:null,black_elo:null,eco:op?op.eco:"",opening:op?op.name:"",fen:"",moves:sans.join(" "),comments:JSON.stringify({0:res.text||""}),plies:sans.length,hash:hashStr(`trn|${this.id}|${g.gid}`)}},
+  return{event:t.name,site:"Gambito Lab · Torneo",date:`${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())}`,round:trnRoundLabel(t,g),white:trnPName(t,g.w),black:trnPName(t,g.b),result:res.result,white_elo:null,black_elo:null,eco:op?op.eco:"",opening:op?op.name:"",fen:"",moves:sans.join(" "),comments:JSON.stringify({0:(res.text||"")+(res.clock?` · Reloj final: ${trnClockTxt(res.clock)}`:"")}),plies:sans.length,hash:hashStr(`trn|${this.id}|${g.gid}`)}},
  // al terminar una partida: biblioteca + resultado + avance del torneo, en una sola transacción
  finishGame(g,res,libId){
   const t=this.t;if(!t||g.result)return;
   const tx=DB.begin();
   try{
    if(libId==null&&res.sans&&res.sans.length){try{libId=DB.insertGame(this.libRecord(t,g,res,res.sans))}catch(e){libId=null}}
-   g.libId=libId||null;g.plies=res.sans?res.sans.length:g.plies;
+   g.libId=libId||null;g.plies=res.sans?res.sans.length:g.plies;if(res.clock)g.clockEnd={w:Math.round(res.clock.w*10)/10,b:Math.round(res.clock.b*10)/10};
    TrnCore.record(t,g.gid,res.result,res.text);
    Object.values(t.games).forEach(x=>this.openingFor(t,x));
    this.save(true);
@@ -1675,21 +1718,26 @@ const Tourney={
  playMine(){
   const t=this.t,g=this.userGame(t);if(!g){toast("No tienes partidas pendientes en esta ronda.",{type:"info"});return}
   const me=t.players[g.w].kind==="human"?"w":"b",opp=t.players[me==="w"?g.b:g.w],arm=!!(g.ko&&g.ko.stage==="A");
-  let tc=t.settings.tc||"none",clock=null;if(arm){tc="300+0";clock={w:300,b:240}}
+  let tc=TrnCore.normTc(t.settings.tc),clock=null;if(arm){if(tc==="none"){tc="300+0";clock={w:300,b:240}}else clock=TrnCore.startClock(tc,true)/* negras 4/5 */}
   if(g.live&&g.live.clock)clock=g.live.clock;
   Play.pendingCtx={tid:this.id,gid:g.gid,engine:opp.engine,level:opp.level,myColor:me,tc,clock,sans:g.live?g.live.sans:null,event:t.name,round:trnRoundLabel(t,g),oppName:opp.name,armageddon:arm,maxPlies:(t.settings.maxMoves||200)*2};
   g.status="live";this.save(true);
   location.hash="#/jugar"},
  saveUserLive(gid,sans,clock){const t=this.t,g=t&&t.games[gid];if(!g||g.result)return;g.live={sans:sans.slice(),clock,ts:Date.now()};g.plies=sans.length;this.save()},
  suspendUser(gid,sans,clock){const t=this.t,g=t&&t.games[gid];if(!g||g.result)return;g.live={sans:sans.slice(),clock,ts:Date.now()};g.status="pending";this.save(true)},
- reportUser(gid,result,text,libId,sans){const t=this.t,g=t&&t.games[gid];if(!g||g.result)return;this.finishGame(g,{result,text,sans:sans||[]},libId);this.pump()},
- pause(v){if(!this.t)return;this.t.paused=v;this.save(true);TrnUI.render()},
+ reportUser(gid,result,text,libId,sans,clock){const t=this.t,g=t&&t.games[gid];if(!g||g.result)return;this.finishGame(g,{result,text,sans:sans||[],clock:clock||null},libId);this.pump()},
+ // al ocultar/cerrar la app: guarda la partida en curso con sus relojes (al volver no se descuenta el tiempo fuera)
+ flushLive(){try{if(!this.t)return;if(GameRunner.t===this.t&&GameRunner.g&&GameRunner.g.status==="live")GameRunner.snapshot();if(typeof Play!=="undefined"&&Play.ctx&&Play.ctx.tid===this.id&&!Play.ended&&Play.chess&&Play.sans.length)this.saveUserLive(Play.ctx.gid,Play.sans,{w:Math.max(0,Play.live("w")),b:Math.max(0,Play.live("b"))});/* respaldo síncrono: IndexedDB no siempre termina de escribir al recargar/cerrar */const bk=Object.values(this.t.games).filter(g=>!g.result&&g.live&&g.status==="live").map(g=>({gid:g.gid,live:g.live}));try{localStorage.setItem("gambito-trnLive",JSON.stringify({tid:this.id,games:bk}))}catch(e){}this.save(true);if(DB.dirty)DB.flush()}catch(e){}},
+ // al cargar: aplica el respaldo de flushLive si es más reciente que lo guardado
+ applyBackup(id,t){try{const b=JSON.parse(localStorage.getItem("gambito-trnLive")||"null");if(!b||b.tid!==id||!t)return;for(const x of b.games||[]){const g=t.games[x.gid];if(!g||g.result||!x.live||!Array.isArray(x.live.sans))continue;if(!g.live||(x.live.ts||0)>(g.live.ts||0))g.live=x.live}localStorage.removeItem("gambito-trnLive")}catch(e){}},
+ pause(v){if(!this.t)return;this.t.paused=v;if(v&&GameRunner.t===this.t&&GameRunner.g&&GameRunner.g.status==="live")GameRunner.snapshot();this.save(true);TrnUI.render()},
  stopT(){const t=this.t;if(!t)return;GameRunner.stop();this.gen++;this.busy=false;t.status="finished";t.stopped=true;t.finishedAt=Date.now();Object.values(t.games).forEach(g=>{if(!g.result&&g.b!=null){g.status="cancelled";g.live=null}});this.save(true);DB.setMeta("trnActive","");TrnUI.result(`Torneo «${t.name}» detenido.`);TrnUI.render(true)},
  remove(id){if(this.id===id){GameRunner.stop();this.gen++;this.busy=false;this.t=null;this.id=null;DB.setMeta("trnActive","")}DB.trnDelete(id)},
  withdrawMissing(){const t=this.t;if(!t)return;this.missing(t).forEach(p=>TrnCore.withdraw(t,p.pid));this.save(true);TrnUI.render();this.pump()}
 };
 
 /* ---------- Pantalla de torneos ---------- */
+document.addEventListener("visibilitychange",()=>{if(document.hidden)Tourney.flushLive()});window.addEventListener("pagehide",()=>Tourney.flushLive());
 const TrnUI={
  viewId:null,board:null,evalbar:null,tab:"table",wiz:null,_lastState:"",
  init(){
@@ -1706,7 +1754,9 @@ const TrnUI={
   $("#trn-withdraw").onclick=()=>Tourney.withdrawMissing();
   const tabs=$$("#trn-tabs button");tabs.forEach(b=>b.onclick=()=>this.setTab(b.dataset.tt));
   $("#trn-tabs").addEventListener("keydown",e=>{if(e.key!=="ArrowRight"&&e.key!=="ArrowLeft")return;const vis=tabs.filter(b=>!b.hidden),i=vis.indexOf(document.activeElement);if(i<0)return;e.preventDefault();const n=vis[(i+(e.key==="ArrowRight"?1:-1)+vis.length)%vis.length];n.focus();n.click()});
+  setInterval(()=>this.tickClocks(),100);
   this.syncSpeed();Wizard.init()},
+ tickClocks(){const gr=GameRunner;if(!gr.clock||!gr.thinking||!this.liveOn(gr))return;const el=$("#tv-clock-"+gr.thinking);if(!el)return;const v=gr.liveClock(gr.thinking);el.textContent=Play.fmtClock(v);el.classList.toggle("low",v<20)},
  syncSpeed(){$$("#tv-speed button").forEach(b=>{const on=b.dataset.sp===GameRunner.speed;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})},
  route(h){
   this.init();
@@ -1717,7 +1767,7 @@ const TrnUI={
   this.viewId=null;this.showHome()},
  showHome(){$("#trn-home").hidden=false;$("#trn-detail").hidden=true;this.renderList()},
  visible(){return document.body.dataset.view==="tourney"},
- viewT(){return this.viewId&&Tourney.id===this.viewId&&Tourney.t?Tourney.t:this.viewId?DB.trnGet(this.viewId):null},
+ viewT(){return this.viewId&&Tourney.id===this.viewId&&Tourney.t?Tourney.t:this.viewId?trnNormalize(DB.trnGet(this.viewId)):null},
  renderList(){
   const rows=DB.trnList(),act=Tourney.activeId(),el=$("#trn-list");
   if(!rows.length){el.innerHTML=`<div class="card empty"><div class="big trn-big">${icon("trophy")}</div><h3>Aún no hay torneos</h3><p>Crea uno: motores entre sí (Aurora, Stockfish…) y, si quieres, tú también.</p><button class="btn btn-primary" id="trn-empty-new">${icon("plus")}<span>Nuevo torneo</span></button></div>`;$("#trn-empty-new").onclick=()=>location.hash="#/torneos/nuevo";return}
@@ -1732,7 +1782,7 @@ const TrnUI={
   const isAct=Tourney.id===this.viewId,p=TrnCore.progress(t),R=t.rounds[t.current];
   $("#trn-title").textContent=t.name;
   const stTxt=t.status==="finished"?(t.stopped?"Detenido":"Terminado"):isAct?(t.paused?"En pausa":"En curso"):"Sin activar";
-  $("#trn-sub").textContent=`${TrnCore.FORMATS[t.format]||t.format} · ${t.players.length} jugadores · ${t.format==="swiss"?`${R?R.name:""} de ${t.settings.swissRounds}`:R?R.name+(t.format!=="ko"?` de ${t.rounds.length}`:""):""} · ${p.done}/${p.total} partidas · ${stTxt}`;
+  $("#trn-sub").textContent=`${TrnCore.FORMATS[t.format]||t.format} · ${t.players.length} jugadores · ${TrnCore.tcLabel(t.settings.tc)}${t.settings.tcUserOnly&&t.players.some(p=>p.kind==="human")?" (solo tus partidas)":""} · ${t.format==="swiss"?`${R?R.name:""} de ${t.settings.swissRounds}`:R?R.name+(t.format!=="ko"?` de ${t.rounds.length}`:""):""} · ${p.done}/${p.total} partidas · ${stTxt}`;
   $("#trn-pbar").style.width=(p.total?p.done/p.total*100:0)+"%";$("#trn-pbar").parentElement.setAttribute("aria-valuenow",p.total?Math.round(p.done/p.total*100):0);
   const ug=isAct?Tourney.userGame(t):null;$("#trn-mygame").hidden=!ug;
   if(ug){const live=ug.live&&ug.live.sans&&ug.live.sans.length;$("#trn-mygame").lastChild.textContent=live?"Seguir mi partida":"Jugar mi partida"}
@@ -1771,7 +1821,7 @@ const TrnUI={
   const ev=gr.lastEval;if(ev)this.evalbar.set(ev.cp,ev.mate,"w");
   this.liveCards(gr);this.liveMoves(gr);if(!skip&&m)SFX.forMove&&SFX.on&&SFX.forMove(m,gr.chess)},
  thinking(gr,p){if(!this.liveOn(gr))return;this.liveCards(gr)},
- liveCards(gr){const t=gr.t,g=gr.g,c=gr.chess,cap=capturedInfo(gr.objs,gr.objs.length),mk=(col,el)=>{const p=t.players[col==="w"?g.w:g.b],active=gr.thinking===col;el.innerHTML=playerCardHTML({name:p.name,color:col,sub:`Semilla ${p.seed}${gr.thinking===col?" · pensando…":""}`,captured:col==="w"?cap.byW:cap.byB,mat:col==="w"?Math.max(0,cap.diff):Math.max(0,-cap.diff),clock:null});const av=el.querySelector(".avatar");if(av)av.textContent=initials(p.name.replace(/·/g," "));el.classList.toggle("turn",active)};
+ liveCards(gr){const t=gr.t,g=gr.g,c=gr.chess,cap=capturedInfo(gr.objs,gr.objs.length),cv=col=>gr.clock?(gr.liveClock?gr.liveClock(col):gr.clock[col]):null,mk=(col,el)=>{const p=t.players[col==="w"?g.w:g.b],active=gr.thinking===col,v=cv(col);el.innerHTML=playerCardHTML({name:p.name,color:col,sub:`Semilla ${p.seed}${gr.thinking===col?" · pensando…":""}`,captured:col==="w"?cap.byW:cap.byB,mat:col==="w"?Math.max(0,cap.diff):Math.max(0,-cap.diff),clock:v==null?null:Play.fmtClock(v),clockId:"tv-clock-"+col,active});const ck=el.querySelector(".clock");if(ck){ck.classList.toggle("low",v<20);ck.setAttribute("aria-label",`Reloj de ${col==="w"?"blancas":"negras"}`)}const av=el.querySelector(".avatar");if(av)av.textContent=initials(p.name.replace(/·/g," "));el.classList.toggle("turn",active)};
   mk("b",$("#tv-card-top"));mk("w",$("#tv-card-bottom"));$("#tv-label").textContent=`${t.format==="ko"?trnRoundLabel(t,g):"Ronda "+g.round} · ${trnPName(t,g.w)} – ${trnPName(t,g.b)}`},
  liveMoves(gr){renderMovesList($("#tv-moves"),{sans:gr.sans,startFen:"",ply:gr.sans.length,verdicts:null,onJump:()=>{}})},
  renderLiveIdle(t){
@@ -1781,7 +1831,7 @@ const TrnUI={
   const last=Object.values(t.games).filter(g=>g.result&&g.b!=null&&g.result!=="bye").sort((a,b)=>b.round-a.round||b.board-a.board)[0];
   const c=new LIB.Chess(),objs=[],sans=[];if(last&&last.libId){const rec=DB.getGame(last.libId);if(rec&&rec.moves)for(const s of rec.moves.split(/\s+/).filter(Boolean)){const m=c.move(s);if(!m)break;objs.push(m);sans.push(m.san)}}
   this.board.orient="w";this.board.sync(c,{lastMove:objs[objs.length-1]||null});this.evalbar.set(0,0,"w");
-  const fake={t,g:last||{w:0,b:Math.min(1,t.players.length-1),round:1,board:1},chess:c,objs,sans,thinking:null};
+  const fake={t,g:last||{w:0,b:Math.min(1,t.players.length-1),round:1,board:1},chess:c,objs,sans,thinking:null,clock:last&&last.clockEnd?last.clockEnd:null};
   this.liveCards(fake);renderMovesList($("#tv-moves"),{sans,startFen:"",ply:sans.length,verdicts:null,onJump:()=>{}});
   $("#tv-label").textContent=last?`Última partida · ${trnPName(t,last.w)} – ${trnPName(t,last.b)} · ${this.resTxt(last)}`:"Aún no empieza ninguna partida";
   this.state(t.status==="finished"?(t.stopped?"Torneo detenido":"Torneo terminado"):!isAct?"Torneo sin activar":Tourney.userGame(t)&&!Tourney.nextEngineGame()?"Esperando tu partida":t.paused?"En pausa":"",t.status==="finished"?"end":"pause")},
@@ -1800,11 +1850,14 @@ const Wizard={
   $("#trn-add").onclick=()=>this.add();
   $("#trn-me").onchange=()=>{this.me=$("#trn-me").checked;this.renderPlayers()};
   $("#trn-add-level").oninput=()=>$("#trn-add-level-v").textContent=`Nv ${$("#trn-add-level").value} · ${LEVELS[+$("#trn-add-level").value].name}`;
-  ["trn-think","trn-tc","trn-kogames"].forEach(id=>$("#"+id).addEventListener("change",()=>this.estimate()));
+  ["trn-think","trn-kogames"].forEach(id=>$("#"+id).addEventListener("change",()=>this.estimate()));
+  $("#trn-tc").addEventListener("change",()=>{this.syncTc();this.estimate()});
+  ["trn-tc-min","trn-tc-inc"].forEach(id=>$("#"+id).addEventListener("input",()=>{this.checkTc();this.estimate()}));
   $("#trn-swiss-rounds").addEventListener("input",()=>{this.roundsTouched=true;this.estimate()});
   $("#modal-trn").addEventListener("click",e=>{if(e.target.closest("[data-close]")&&location.hash.startsWith("#/torneos/nuevo"))setTimeout(()=>history.replaceState(null,"","#/torneos"),0)})},
  open(){
   this.init();this.step=1;this.players=[{engine:"aurora",level:1},{engine:"aurora",level:3}];if(Engines.get("sf18")?.status==="ready")this.players.push({engine:"sf18",level:1});this.me=false;this.roundsTouched=false;$("#trn-me").checked=false;
+  $("#trn-tc").value="none";$("#trn-tc-min").value=5;$("#trn-tc-inc").value=3;this.syncTc();
   $("#trn-name").value=`Torneo ${DB.trnList().length+1}`;$("#trn-err").textContent="";
   engineOptions($("#trn-add-engine"),"aurora");$("#trn-add-level").value=3;$("#trn-add-level").oninput();
   this.syncFormat();this.renderPlayers();this.go(1);openModal("#modal-trn")},
@@ -1818,10 +1871,21 @@ const Wizard={
   $("#trn-plist").innerHTML=ps.map((p,i)=>`<li class="trn-prow"><b class="seed" aria-hidden="true">${i+1}</b><span class="pn2">${esc(p.name)}</span>${p.kind==="human"?'<small>tú</small>':`<button type="button" class="ibtn" data-up="${i-off}" aria-label="Subir a ${esc(p.name)}" ${i-off<=0?"disabled":""}>${icon("up")}</button><button type="button" class="ibtn" data-rm="${i-off}" aria-label="Quitar a ${esc(p.name)}">${icon("x")}</button>`}</li>`).join("");
   $("#trn-plist").querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>{const i=+b.dataset.up;if(i>0){[this.players[i-1],this.players[i]]=[this.players[i],this.players[i-1]];this.renderPlayers()}});
   $("#trn-plist").querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{this.players.splice(+b.dataset.rm,1);this.renderPlayers();announce("Participante quitado")});
-  $("#trn-pcount").textContent=`${ps.length} participante${ps.length===1?"":"s"} (2–16; suizo: mínimo 3)`;$("#trn-tc-row").hidden=!this.me;this.syncFormatLimits();this.estimate()},
+  $("#trn-pcount").textContent=`${ps.length} participante${ps.length===1?"":"s"} (2–16; suizo: mínimo 3)`;this.syncFormatLimits();this.estimate()},
+ syncTc(){const on=$("#trn-tc").value==="custom";$("#trn-tc-custom").hidden=!on;["#trn-tc-min","#trn-tc-inc"].forEach(q=>$(q).disabled=!on);this.checkTc(true)},
+ // ritmo elegido: "none" | "base+inc" (s) | {err, el} si el personalizado no es válido
+ tcVal(){const v=$("#trn-tc").value;if(v!=="custom")return v;const mn=parseFloat(String($("#trn-tc-min").value).replace(",",".")),incS=String($("#trn-tc-inc").value).trim(),inc=incS===""?NaN:Number(incS);
+  if(!(mn>=.5&&mn<=180))return{err:"Minutos por jugador: un valor entre 0,5 y 180.",el:"#trn-tc-min"};
+  if(!(Number.isInteger(inc)&&inc>=0&&inc<=60))return{err:"Incremento: un número entero de segundos entre 0 y 60.",el:"#trn-tc-inc"};
+  return Math.round(mn*60)+"+"+inc},
+ checkTc(quiet){const v=this.tcVal(),bad=typeof v!=="string";["#trn-tc-min","#trn-tc-inc"].forEach(q=>{if(bad&&v.el===q&&!quiet)$(q).setAttribute("aria-invalid","true");else $(q).removeAttribute("aria-invalid")});$("#trn-tc-cerr").textContent=bad&&!quiet?v.err:"";return bad?v:null},
+ userGames(){if(!this.me)return 0;const n=this.list().length,f=this.fmt();if(f==="rr1")return n-1;if(f==="rr2")return 2*(n-1);if(f==="ko")return(+$("#trn-kogames").value||2)*Math.ceil(Math.log2(Math.max(2,n)));return+$("#trn-swiss-rounds").value||TrnCore.swissRoundsDefault(n)},
  syncFormatLimits(){const n=this.list().length;if(!this.roundsTouched)$("#trn-swiss-rounds").value=TrnCore.swissRoundsDefault(Math.max(3,n));$("#trn-swiss-rounds").max=Math.max(1,n-1);if(+$("#trn-swiss-rounds").value>n-1)$("#trn-swiss-rounds").value=Math.max(1,n-1)},
  games(){const n=this.list().length,f=this.fmt();if(f==="rr1")return n*(n-1)/2;if(f==="rr2")return n*(n-1);if(f==="ko")return Math.max(0,(n-1)*(+$("#trn-kogames").value||2));return Math.floor(n/2)*(+$("#trn-swiss-rounds").value||TrnCore.swissRoundsDefault(n))},
- estimate(){const ps=this.list().filter(p=>p.kind==="engine"),think=$("#trn-think").value,avg=ps.length?ps.reduce((s,p)=>s+trnThinkMt(p.level,think),0)/ps.length:300,g=this.games(),min=Math.max(1,Math.round(g*85*(avg+120)/60000));$("#trn-est").textContent=`≈ ${g} partidas · unos ${min} min con velocidad Normal${this.me?" (más tus partidas)":""}. Con «Saltar» se ve solo el resultado y tarda menos.`},
+ estimate(){const ps=this.list().filter(p=>p.kind==="engine"),think=$("#trn-think").value,avg=ps.length?ps.reduce((s,p)=>s+trnThinkMt(p.level,think),0)/ps.length:300,g=this.games(),ug=Math.min(g,this.userGames()),tv=this.tcVal(),tc=typeof tv==="string"?tv:"none",
+  e=TrnCore.estimateSecs({engineGames:g-ug,userGames:ug,avgMt:avg,tc}),min=Math.max(1,Math.round(e.total/60)),dur=min<60?`${min} min`:`${Math.floor(min/60)} h${min%60?" "+min%60+" min":""}`;
+  $("#trn-est").textContent=`≈ ${g} ${g===1?"partida":"partidas"} · ${tc==="none"?`unos ${dur} con velocidad Normal${this.me?" (más tus partidas)":""}`:`hasta unos ${dur} con ${TrnCore.tcLabel(tc)}${this.me?" (incluidas tus partidas)":""}`}. Con «Saltar» se ve solo el resultado${tc==="none"?" y tarda menos":""}.`;
+  $("#trn-est-warn").textContent=e.total>1800?`Aviso: es un torneo largo (más de 30 min). Para acortarlo usa menos participantes, un ritmo más rápido${think!=="rapido"?" o la reflexión «Rápido»":""}.`:""},
  go(k){
   if(k>this.step&&!this.valid(this.step))return;
   this.step=Math.max(1,Math.min(3,k));$("#trn-err").textContent="";
@@ -1833,10 +1897,11 @@ const Wizard={
  valid(step){const err=m=>{$("#trn-err").textContent=m;return false};
   if(step===1&&!$("#trn-name").value.trim())return err("Ponle un nombre al torneo.");
   if(step===2){const n=this.list().length;if(n<2)return err("Hacen falta al menos 2 participantes.");if(n>16)return err("Máximo 16 participantes.");if(this.fmt()==="swiss"&&n<3)return err("El suizo necesita al menos 3 participantes.")}
+  if(step===3){const bad=this.checkTc();if(bad){$(bad.el).focus();return err("Revisa el ritmo personalizado: "+bad.err)}}
   return true},
  create(){
-  if(!this.valid(1)||!this.valid(2))return;const f=this.fmt(),n=this.list().length;
-  const cfg={name:$("#trn-name").value.trim().slice(0,60),format:f,players:this.list(),settings:{tc:this.me?$("#trn-tc").value:"none",think:$("#trn-think").value,swissRounds:f==="swiss"?Math.max(1,Math.min(n-1,+$("#trn-swiss-rounds").value||TrnCore.swissRoundsDefault(n))):0,koGames:+$("#trn-kogames").value||2,koArmageddon:true,adjudicate:$("#trn-adj").checked,maxMoves:200,openings:$("#trn-open").value,seeding:$("#trn-seed").value}};
+  if(!this.valid(1)||!this.valid(2)||!this.valid(3))return;const f=this.fmt(),n=this.list().length;
+  const cfg={name:$("#trn-name").value.trim().slice(0,60),format:f,players:this.list(),settings:{tc:this.tcVal(),think:$("#trn-think").value,swissRounds:f==="swiss"?Math.max(1,Math.min(n-1,+$("#trn-swiss-rounds").value||TrnCore.swissRoundsDefault(n))):0,koGames:+$("#trn-kogames").value||2,koArmageddon:true,adjudicate:$("#trn-adj").checked,maxMoves:200,openings:$("#trn-open").value,seeding:$("#trn-seed").value}};
   if(DB.trnList().some(r=>r.name===cfg.name))cfg.name+=` (${new Date().toLocaleTimeString("es",{hour:"2-digit",minute:"2-digit"})})`;
   const id=Tourney.create(cfg);closeModal("#modal-trn");toast(`Torneo «${esc(cfg.name)}» creado`,{type:"success"});
   history.replaceState(null,"","#/torneos/"+id);route();Tourney.pump()}
@@ -1864,7 +1929,7 @@ const Play={
  lockUI(on){["#pl-engine","#pl-level","#pl-time","#pl-eval-toggle"].forEach(q=>$(q).disabled=on);$$("#pl-color button").forEach(b=>b.disabled=on);const ff=$('#pl-copy-menu [data-act="from-fen"]');if(ff)ff.disabled=on;$("#pl-setup-head .cfg-t").textContent=on?`Torneo · ${this.ctx.event} · ${/^\d+$/.test(this.ctx.round)?"Ronda "+this.ctx.round:this.ctx.round}`:"Partida contra el motor";const b=$("#btn-newgame");b.classList.remove("arm");b.innerHTML=on?icon("trophy")+"<span>Volver al torneo</span>":icon("plus")+"<span>Nueva partida</span>";$("#btn-over-rematch").innerHTML=on?icon("trophy")+"<span>Volver al torneo</span>":icon("flip")+"<span>Revancha</span>";document.body.classList.toggle("pl-trn",on)},
  leaveCtx(){if(!this.ctx)return;const c=this.ctx;if(!this.ended&&this.chess&&this.sans.length)Tourney.suspendUser(c.gid,this.sans,{w:Math.max(0,this.live("w")),b:Math.max(0,this.live("b"))});else if(!this.ended)Tourney.suspendUser(c.gid,[],null);if(this.thinking)Engines.cancelAll(this.eng(),"play");this.tok++;this.thinking=false;this.ctx=null;this.chess=null;this.ended=null;this.view=null;this.lockUI(false);closeModal("#modal-over")},
  backToTourney(){const tid=this.ctx?this.ctx.tid:Tourney.id;closeModal("#modal-over");location.hash="#/torneos/"+(tid||"")},
- ctxFinished(){const c=this.ctx;this.saveToLibrary(true);Tourney.reportUser(c.gid,this.ended.result,this.ended.title+" — "+this.ended.sub,this.savedId,this.sans)},
+ ctxFinished(){const c=this.ctx;this.saveToLibrary(true);Tourney.reportUser(c.gid,this.ended.result,this.ended.title+" — "+this.ended.sub,this.savedId,this.sans,this.tcOn?{w:Math.max(0,this.clock.w),b:Math.max(0,this.clock.b)}:null)},
  ensure(){if(!this.inited)this.init();if(this.pendingCtx){const c=this.pendingCtx;this.pendingCtx=null;this.enterCtx(c);return}if(this.pendingFen){const fen=this.pendingFen;this.pendingFen=null;this.newGame({fen,myColor:fen.split(" ")[1]==="b"?"b":"w"});return}if(!this.chess)this.newGame();else this.renderAll()},
  newGame(opt={}){this.tok++;this.view=null;if(this.inited)this.updateReview();if(this.thinking)Engines.cancelAll(this.eng(),"play"),this.thinking=false;this.ended=null;this.savedId=null;this.sans=[];this.objs=[];this.startFen=opt.fen||"";this.chess=new LIB.Chess(opt.fen||LIB.START_FEN);this.myColor=opt.myColor||(this.setup.color==="random"?(Math.random()<.5?"w":"b"):this.setup.color);this.board.orient=this.myColor;this.board.setHints(this.setup.hints);this.board.userArrows.clear();this.board.setEngineArrow(null);const tc=this.ctx?this.ctx.tc:opt.fen?"none":this.setup.tc;this.tcOn=tc!=="none";if(this.tcOn){const p=tc.split("+").map(Number);this.clock={w:p[0],b:p[0]};this.inc=p[1]||0}else this.clock={w:0,b:0};if(opt.sans){for(const sn of opt.sans){const m=this.chess.move(sn);if(!m)break;this.sans.push(m.san);this.objs.push(m)}}if(this.tcOn&&opt.clock)this.clock={w:opt.clock.w,b:opt.clock.b};this.clockHist=[{w:this.clock.w,b:this.clock.b}];this.turnStart=performance.now();this.frozenAt=null;$("#pl-evalbar").style.display=this.evalOn()?"":"none";this.renderAll();SFX.start();{const c=this.chess,ins=c.insufficient();if(c.inCheckmate()){this.finish(c.turn()==="w"?"0-1":"1-0","¡Jaque mate!","La posición inicial ya es jaque mate.");return}if(c.inStalemate()){this.finish("1/2-1/2","Tablas","Rey ahogado en la posición inicial.");return}if(ins||c.half>=100){this.finish("1/2-1/2","Tablas",ins?"Material insuficiente.":"Regla de las 50 jugadas.");return}}this.setStatus(this.chess.turn()==="w"?"your":"engine-wait");if(this.chess.turn()!==this.myColor)this.engineTurn();else this.gate();if(this.evalOn())this.quickEval()},
  gate(){this.board.setInteractive(!this.ended&&!this.thinking&&this.view==null&&this.chess.turn()===this.myColor)},
@@ -1875,7 +1940,7 @@ const Play={
  fmtClock(s){s=Math.max(0,s);const m=Math.floor(s/60),sec=s-m*60;return s<20?`${m}:${sec.toFixed(1).padStart(4,"0")}`:`${m}:${String(Math.floor(sec)).padStart(2,"0")}`},
  updateClocks(){for(const c of["w","b"]){const el=$("#pl-clock-"+c);if(!el)continue;const v=this.live(c);el.textContent=this.fmtClock(v);el.classList.toggle("active",!this.ended&&this.chess.turn()===c);el.classList.toggle("low",v<30)}},
  tick(){if(!this.chess||!this.tcOn||this.ended||this.sans.length===0)return;const t=this.chess.turn();if(this.live(t)<=0){this.clock[t]=0;this.turnStart=performance.now();this.frozenAt=null;this.updateClocks();const w=t==="w"?"b":"w";if(this.hasMating(w))this.finish(t==="w"?"0-1":"1-0","Tiempo agotado",t===this.myColor?"Tu tiempo se agotó.":"Se agotó el tiempo del motor.");else this.finish("1/2-1/2","Tablas","Tiempo agotado con material insuficiente.");return}this.updateClocks()},
- hasMating(color){let minors=0;for(let s=0;s<120;s++){if(s&0x88){s+=7;continue}const p=this.chess.board[s];if(!p||(p>0)!==(color==="w"))continue;const t=Math.abs(p);if(t===1||t===4||t===5)return true;if(t===2||t===3)minors++}return minors>=2},
+ hasMating(color){return TrnCore.hasMating(this.chess,color)},
  renderMoves(){const p=this.curPly();renderMovesList($("#pl-moves"),{sans:this.sans,startFen:this.startFen,ply:p,verdicts:null,onJump:q=>this.review(q)});$("#pl-count").textContent=this.sans.length+" jugs.";const op=this.startFen?null:Openings.detect(this.sans.slice(0,p));$("#pl-op").innerHTML=op?`<b>${esc(op.eco)}</b>${esc(op.name)}`:""},
  updateButtons(){$("#btn-undo").disabled=this.ended||!!this.ctx||!this.objs.some(m=>m.color===this.myColor);$("#btn-draw").disabled=!!this.ended||this.thinking||this.chess.turn()!==this.myColor;$("#btn-resign").disabled=!!this.ended},
  setStatus(kind,text){const el=$("#pl-status");el.className="status"+(kind==="engine"?" think":kind==="check"?" check":kind==="end"?" end":"");const msg={your:`Tu turno · juegan ${this.chess.turn()==="w"?"blancas":"negras"}`,"engine-wait":"Preparando al motor",engine:`${esc(Engines.get(this.eng())?.name||"Aurora")} está pensando<span class="dots"></span>`,check:"¡Jaque! Tu rey está atacado",end:text||"Partida terminada"}[kind]||text||"";el.innerHTML=`<i class="dot"></i><span>${msg}</span>`},

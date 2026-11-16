@@ -94,3 +94,16 @@ Verificado (321 partidas de prueba): jugador 101 = SQL 101; jugador+rival 23 = 2
 | 2 | Aprobación de Rhay | finalizado |
 | 3 | Equipo de desarrollo: implementación y pruebas (TAREAS_TORNEOS.md) | finalizado |
 | 4 | Revisión, publicación | finalizado |
+
+## Ajuste 5 (2026-11-15) — Ritmo de juego en torneos (relojes para todos)
+- Paso 3 del asistente, siempre visible: Sin reloj (tiempo fijo por jugada del nivel) · 1+0 · 3+2 · 5+0 · 10+0 · 15+10 · Personalizado (min + s de incremento).
+- Aplica a todas las partidas del torneo (motor vs motor y las del usuario); relojes en las tarjetas.
+- Motores: movetime = min(L.mt, restante/30 + inc·0,8) (misma regla que Jugar); solo cuenta el tiempo real de búsqueda (no las pausas cosméticas ni Rápido/Saltar).
+- Bandera: pierde quien agota el tiempo; tablas si el rival no tiene material para dar mate.
+- Armagedón con reloj: blancas tiempo completo, negras 4/5 (+ incremento).
+- Estimación de duración según el ritmo, con aviso si es larga. Torneos antiguos sin ritmo = "Sin reloj".
+| # | Tarea | Estado |
+|---|---|---|
+| 1 | Implementación (asistente, GameRunner con relojes, bandera, armagedón, Play modo torneo, estimación) | finalizado |
+| 2 | Pruebas (Node + navegador, persistencia de relojes al recargar) | finalizado |
+| 3 | Revisión y publicación | finalizado |

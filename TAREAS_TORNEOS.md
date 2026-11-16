@@ -23,3 +23,30 @@ Diseño aprobado: `DISENO_TORNEOS.md`. Pruebas y fuentes del bloque: `~/Download
 - La partida del usuario usa el tiempo de reflexión de Play (nivel/reloj), no el ajuste «Reflexión de los motores».
 - El torneo se pausa solo mientras se está en la vista Jugar (también en la partida propia del torneo), al analizar en Tablero o con la app en segundo plano.
 - Retirar a un jugador (motor no disponible al reanudar): sus partidas pendientes se dan por perdidas (+/−).
+
+---
+
+# Ajuste 5 — Ritmo de juego en torneos · equipo de desarrollo
+
+Plan: formato único `tc = "base+inc"` en **segundos** (`"60+0"`, `"180+2"`, `"900+10"`) o `"none"`. Funciones puras nuevas en `TrnCore`
+(`normTc`, `parseTc`, `tcLabel`, `startClock`, `clockMovetime`, `hasMating`, `flagResult`, `estimateSecs`) probadas en Node;
+`GameRunner` lleva `clock {w,b}` (solo descuenta el tiempo real de búsqueda, +inc tras cada jugada, bandera con sondeo cada 50 ms),
+guardado en `game.live.clock`; `Play` en modo torneo usa `TrnCore.hasMating`; asistente con «Ritmo de juego» siempre visible.
+
+| # | Paso | Estado |
+|---|---|---|
+| 1 | `TrnCore`: tc normalizado (migra «3+2» en minutos → «180+2»), reloj inicial/armagedón 4/5, movetime con reloj, material de mate, bandera, estimación | finalizado |
+| 2 | `GameRunner`: relojes motor–motor, bandera, persistencia en `live.clock`, snapshot al ocultar/cerrar | finalizado |
+| 3 | `Tourney`/`TrnUI`: migración de torneos antiguos, relojes en tarjetas en tiempo real, reloj final, ritmo en el subtítulo | finalizado |
+| 4 | Asistente paso 3: Ritmo de juego (presets + personalizado con validación), estimación y aviso > 30 min | finalizado |
+| 5 | `Play` modo torneo: ritmo del torneo, armagedón 4/5, `hasMating` compartido | finalizado |
+| 6 | `sw.js` → `gambito-v6`; `core_test.js` ampliado | finalizado |
+| 7 | Verificación: node --check, perft, core_test, navegador (casos a–h), Lighthouse a11y | finalizado |
+
+## Notas / desviaciones (Ajuste 5)
+- Formato `tc` en segundos (el que ya usaba el código: "180+2"); `normTc` convierte valores < 30 como minutos ("3+2" → "180+2"). Torneos v1 con ritmo: `settings.tcUserOnly=true` (el ritmo sigue aplicando solo a tus partidas, como cuando se crearon); v1 sin ritmo = "Sin reloj". Torneos nuevos: `v:2`.
+- El reloj del motor se descuenta al aplicar la jugada (no al terminar la búsqueda), para que el guardado sea coherente jugadas↔reloj; una búsqueda interrumpida por recarga no se cobra.
+- Guardado al ocultar/cerrar: además de IndexedDB, respaldo síncrono en `localStorage["gambito-trnLive"]` (IndexedDB no termina de escribir durante la recarga); al arrancar se aplica si es más reciente.
+- Motores con Aurora limitada por profundidad: suelen gastar mucho menos que el movetime, por eso en 1+0 los relojes bajan poco.
+- La partida del usuario sigue usando L.mt de Play (sin escala «Reflexión»), con la regla de reloj de Jugar.
+- `src/core.js` y `src/runtime.js` regenerados desde index.html; `src/modal.html`/`style.css` NO reflejan el nuevo paso 3 (index.html es la verdad).
