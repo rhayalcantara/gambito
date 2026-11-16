@@ -52,3 +52,33 @@ Versión: **stockfish.js 18.0.8 "lite single-threaded"** (`.js` 20 KB + `.wasm` 
 | 6 | Publicar y verificar en GitHub Pages | finalizado |
 
 Extra encontrado y corregido: `UciSession` usaba `new Chess(...)` (no definido en ese script) → cualquier motor UCI, incluido Stockfish 10, se quedaba colgado. Niveles 5–8 con motores UCI: profundidad 10/14/18/22 (antes 6–9, Stockfish respondía al instante).
+
+## Ajuste 3 (aprobado) — búsqueda de partidas: paginación, jugador/rival y rango de fechas
+**1. Paginación**
+- 50 partidas por página (selector 25 / 50 / 100), consulta con `LIMIT/OFFSET` (rápido aunque haya miles).
+- Barra «‹ Anterior · Página 2 de 8 · Siguiente ›» al pie de la tabla; vuelve a la página 1 al cambiar cualquier filtro.
+- "Seleccionar todas" marca solo la página visible.
+
+**2. Jugador y rival**
+- Campo **Jugador** y campo **Rival (opcional)**, con sugerencias de nombres de la biblioteca.
+- Solo jugador → todas sus partidas, con blancas o negras.
+- Jugador + rival → solo las partidas entre ellos dos, en cualquier color (ej. rhayalcantara vs bunildovelez y viceversa).
+- Coincidencia parcial y sin distinguir mayúsculas («kasp» encuentra «Kasparov, Garry»).
+
+**3. Rango de fechas**
+- **Desde** y **Hasta** (calendario del teléfono). Se puede poner solo uno.
+- Fechas incompletas del PGN («1858.??.??») entran si su año/mes cae en el rango; sin año, quedan fuera cuando hay rango.
+- Reemplaza al filtro "Todas las épocas" (una época es solo un rango); las vistas guardadas con época se convierten solas.
+
+**Interfaz:** botón «Filtros (n)» que abre/pliega una fila con Jugador, Rival, Desde, Hasta y «Limpiar»; en el celular va en columna.
+
+| # | Tarea | Estado |
+|---|---|---|
+| 1 | Consulta con filtros jugador/rival/fechas + LIMIT/OFFSET (SQLite y modo local) | finalizado |
+| 2 | Interfaz de filtros (plegable, sugerencias, limpiar) | finalizado |
+| 3 | Paginación (barra, tamaño de página, selección por página) | finalizado |
+| 4 | Vistas guardadas compatibles (época → rango) | finalizado |
+| 5 | Pruebas: 300+ partidas, combinaciones de filtros, fechas incompletas, celular y escritorio | finalizado |
+| 6 | Aplicar en Downloads y repo, subir versión SW, publicar | finalizado |
+
+Verificado (321 partidas de prueba): jugador 101 = SQL 101; jugador+rival 23 = 23; ambos en 2021: 4 = 4; «2021.??.??» entra en el rango 2021; vista antigua «2020s» → 2020-01-01…2029-12-31 (276 = 276); celular 390 px sin desborde.
