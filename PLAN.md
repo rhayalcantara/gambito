@@ -82,3 +82,15 @@ Extra encontrado y corregido: `UciSession` usaba `new Chess(...)` (no definido e
 | 6 | Aplicar en Downloads y repo, subir versión SW, publicar | finalizado |
 
 Verificado (321 partidas de prueba): jugador 101 = SQL 101; jugador+rival 23 = 23; ambos en 2021: 4 = 4; «2021.??.??» entra en el rango 2021; vista antigua «2020s» → 2020-01-01…2029-12-31 (276 = 276); celular 390 px sin desborde.
+
+## Ajuste 4 (2026-11-15) — Torneos entre motores y/o el usuario · requisitos
+- Formato elegible al crear: todos contra todos (ida y vuelta), todos contra todos (una vuelta), eliminatoria (con desempate), suizo.
+- Participantes libres: "Tú" + cualquier motor y nivel (Aurora 1–8, Stockfish 18 1–8, otros UCI cargados).
+- Motor vs motor: en vivo en un tablero, con acelerar / saltar al resultado; tabla de posiciones que se actualiza.
+- Partidas del usuario: control de tiempo elegido al crear el torneo (sin reloj, 3+2, 5, 10).
+| # | Tarea | Estado |
+|---|---|---|
+| 1 | Equipo de análisis: diseño y propuesta (DISENO_TORNEOS.md) | finalizado |
+| 2 | Aprobación de Rhay | finalizado |
+| 3 | Equipo de desarrollo: implementación y pruebas (TAREAS_TORNEOS.md) | finalizado |
+| 4 | Revisión, publicación | finalizado |
