@@ -35,3 +35,20 @@ Causa: `scrollIntoView` de la jugada actual desplaza toda la página.
 | 1 | Desplazar solo dentro de la caja de jugadas (nunca la página) | finalizado |
 | 2 | Celular/Tablero: jugadas en una línea horizontal bajo el tablero, actual centrada, las demás se desvanecen | finalizado |
 | 3 | Aplicar en Downloads y en el repo, subir versión del SW, probar y publicar | finalizado |
+
+## Ajuste 2 (2026-11-15) — Stockfish 18 integrado
+Versión: **stockfish.js 18.0.8 "lite single-threaded"** (`.js` 20 KB + `.wasm` 7,3 MB, NNUE pequeña).
+- Single-threaded porque GitHub Pages no permite las cabeceras COOP/COEP que exige la versión multihilo; la "full" pesa 113 MB (inviable en el teléfono).
+- Licencia GPLv3: se incluye `Copying.txt` y el enlace al código fuente (nmrugg/stockfish.js) en el README.
+- Se carga solo cuando se elige (no se descarga al abrir la app); queda guardado para usarse sin internet.
+
+| # | Tarea | Estado |
+|---|---|---|
+| 1 | Copiar `vendor/stockfish/` (js + wasm + licencia) | finalizado |
+| 2 | Registrar "Stockfish 18" en el selector de motores (se activa si los archivos existen) | finalizado |
+| 3 | Análisis: con Stockfish la profundidad del control se escala (3→8 … 8→18) | finalizado |
+| 4 | Service worker: guardar el motor en caché al primer uso (offline) | finalizado |
+| 5 | Probar: jugar en niveles 1 y 8, analizar partida, offline, consola limpia | finalizado |
+| 6 | Publicar y verificar en GitHub Pages | finalizado |
+
+Extra encontrado y corregido: `UciSession` usaba `new Chess(...)` (no definido en ese script) → cualquier motor UCI, incluido Stockfish 10, se quedaba colgado. Niveles 5–8 con motores UCI: profundidad 10/14/18/22 (antes 6–9, Stockfish respondía al instante).
